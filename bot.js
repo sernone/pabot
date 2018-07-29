@@ -1,8 +1,10 @@
 var Discord = require("discord.js");
 var auth = require("./auth.json");
+var https = require("https");
 var client = new Discord.Client();
 
 var botCmds = [["!role", "Adds a fan role to a user eg: !role pubg"]];
+var sentLive = false;
 
 client.on("ready", () => {
   console.log(client.user.username + " - (" + client.user.id + ") Connected");
@@ -13,6 +15,8 @@ client.on("ready", () => {
   botCmds.forEach(cmd => {
     channel.send("Command: " + cmd[0] + " - " + cmd[1]);
   });
+
+  setInterval(checkStream,5000,'polaracetv');
 });
 
 client.on("message", message => {
@@ -31,6 +35,7 @@ client.on("message", message => {
           var roleToAdd = message.guild.roles.filter(
             fanRole => fanRole.name.toLowerCase() == arg.toLowerCase()
           );
+
           if (roleToAdd.size == 1 && roleToAdd.first() != undefined) {
             var memeber = message.member;
             var addingRole = roleToAdd.first();
@@ -38,7 +43,7 @@ client.on("message", message => {
               memeber
                 .addRole(addingRole)
                 .then(
-                  message.reply(
+                  message.channel.send(
                     "Success - Role " +
                       addingRole +
                       " has been added given to you"
@@ -76,3 +81,38 @@ client.on("message", message => {
 });
 
 client.login(auth.token);
+
+//Other functions
+function checkStream(twitchUser) {
+  var http_options = {
+    "host": "api.twitch.tv",
+    "path": "/helix/streams?user_login="+twitchUser,
+    "method": "GET",
+    "headers": {
+      "Client-ID": "btwox7o0tmnpqupua8xwj8rxrt94x7"
+    }
+  }
+  https.get(http_options, (resp) =>{
+    var data = '';
+
+    resp.on('data', (chunk) => {
+      data += chunk;
+    });
+
+    resp.on('end', () =>{
+      var chanData = JSON.parse(data);
+      chanData = chanData.data;
+
+      if(chanData.length > 0) {
+        if(!sentLive) {
+          var disChan = client.channels.find("name", "stream-and-media-sharing");
+          disChan.send('We are LIVE here https://twitch.tv/'+twitchUser+' , Come by and check us out!');
+          disChan.send(chanData[0].title);
+          sentLive = true;
+        }
+      } else {
+        sentLive = false;
+      }
+    });
+  });
+}
