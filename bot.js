@@ -16,7 +16,7 @@ client.on("ready", () => {
     channel.send("Command: " + cmd[0] + " - " + cmd[1]);
   });
 
-  setInterval(checkStream,5000,'polaracetv');
+  setInterval(checkStream,60000,'polaracetv');
 });
 
 client.on("message", message => {
