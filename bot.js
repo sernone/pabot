@@ -6,7 +6,7 @@ var botCmds = [["!role", "Adds a fan role to a user eg: !role pubg"]];
 
 client.on("ready", () => {
   console.log(client.user.username + " - (" + client.user.id + ") Connected");
-  var channel = client.channels.find("name", "role-call-dev");
+  var channel = client.channels.find("name", "role-call");
   channel.send(
     "Hello AcePack! I'am ready for you now, use ! to call to me. Right now my available commands are:"
   );
@@ -16,7 +16,7 @@ client.on("ready", () => {
 });
 
 client.on("message", message => {
-  if (message.channel.name == "role-call-dev") {
+  if (message.channel.name == "role-call") {
     var msgChat = message.content;
     if (msgChat.substring(0, 1) == "!") {
       var cmd = msgChat.substring(1, msgChat.indexOf(" "));
