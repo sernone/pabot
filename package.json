@@ -11,6 +11,7 @@
   "dependencies": {
     "discord.io": "^2.5.3",
     "discord.js": "^11.3.2",
-    "forever": "^0.15.3"
+    "forever": "^0.15.3",
+    "https": "^1.0.0"
   }
 }
