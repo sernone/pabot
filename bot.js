@@ -60,6 +60,11 @@ client.on("message", message => {
             );
           }
           break;
+        case '!':
+          message.channel.send(
+            "All commands require argements, the command you used is missing an argument"
+          );
+        break;
         default:
           message.channel.send(
             "Invalid command, available commands are: !role"
