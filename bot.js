@@ -18,7 +18,7 @@ var botCmds = [
 ];
 var sentLive = false;
 
-schedule.scheduleJob("0 0 * * *", () => {
+schedule.scheduleJob("0 5 * * *", () => {
   fs.writeFileSync("./streamer-schedule.json", "{}");
 });
 
