@@ -14,6 +14,10 @@ var botCmds = [
   [
     "!streamtoday",
     "Outputs who is streaming and what time they are streaming on the PATV Channel"
+  ],
+  [
+    "?help",
+    "All ? prefix commands control the music bot attached to me, use ?help to get a list of commands for it."
   ]
 ];
 var sentLive = false;
