@@ -6,10 +6,13 @@ var schedule = require("node-schedule");
 var client = new Discord.Client();
 
 var botCmds = [
-  ["!role roleName", "Adds a fan role to a user eg: !role pubg"],
+  [
+    "!role roleName",
+    "Adds a fan role to a user eg: !role pubg. This can only be called from the #role-call channel."
+  ],
   [
     "!checkin timeToStream",
-    "For PATV Members only to checkin to their stream for the day"
+    "For PATV Members only to checkin to their stream for the day. This can only be called from the #patv-streamer channel."
   ],
   [
     "!streamtoday",
@@ -17,7 +20,7 @@ var botCmds = [
   ],
   [
     "?help",
-    "All ? prefix commands control the music bot attached to me, use ?help to get a list of commands for it."
+    "All ? prefix commands control the music bot attached to me, use ?help to get a list of commands for it. Please call this from the #bot-spam Channel."
   ]
 ];
 var sentLive = false;
@@ -123,6 +126,11 @@ client.on("message", message => {
               "The !role command requires a fan role after it. Please include the role you're looking for after the command."
             );
         }
+        break;
+        case "help":
+          botCmds.forEach(cmd => {
+            message.channel.send("Command: " + cmd[0] + " - " + cmd[1]);
+          });
         break;
       default:
         message.channel.send(
