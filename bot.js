@@ -29,18 +29,24 @@ schedule.scheduleJob("0 5 * * *", () => {
   fs.writeFileSync("./streamer-schedule.json", "{}");
 });
 
-client.on("ready", () => {
-  console.log(client.user.username + " - (" + client.user.id + ") Connected");
-  var channel = client.channels.find("name", "role-call");
-  channel.send(
-    "Hello AcePack! I'am ready for you now, use ! to call to me. Right now my available commands are:"
-  );
-  botCmds.forEach(cmd => {
-    channel.send("Command: " + cmd[0] + " - " + cmd[1]);
-  });
+try {
+  client.on("ready", () => {
+    console.log(client.user.username + " - (" + client.user.id + ") Connected");
+    var channel = client.channels.find("name", "role-call");
+    channel.send(
+      "Hello AcePack! I'am ready for you now, use ! to call to me. Right now my available commands are:"
+    );
+    botCmds.forEach(cmd => {
+      channel.send("Command: " + cmd[0] + " - " + cmd[1]);
+    });
 
-  setInterval(checkStream, 60000, "polaracetv");
-});
+    setInterval(checkPackRole, 60000);
+    setInterval(checkStream, 60000, "polaracetv");
+  });
+}
+catch(err) {
+  throw err.message;
+}
 
 client.on("message", message => {
   var msgChat = message.content;
@@ -144,6 +150,19 @@ client.on("message", message => {
 client.login(auth.token);
 
 //Other functions
+
+function checkPackRole(){
+  var polarServer = client.guilds.find(serv => {
+    if(serv.name === 'SernBot Test' && serv.verified !== true) return serv
+  })
+  var packRole = polarServer.roles.find('name','The Pack');
+  polarServer.members.find(mem => {
+    if(!mem.roles.exists('id', packRole.id)) {
+      mem.addRole(packRole, "PolarBot added The Pack Role to this user.");
+    }
+  })
+}
+
 function checkStream(twitchUser) {
   var http_options = {
     host: "api.twitch.tv",
