@@ -153,7 +153,7 @@ client.login(auth.token);
 
 function checkPackRole(){
   var polarServer = client.guilds.find(serv => {
-    if(serv.name === 'SernBot Test' && serv.verified !== true) return serv
+    if(serv.name === 'Polar Ace') return serv
   })
   var packRole = polarServer.roles.find('name','The Pack');
   polarServer.members.find(mem => {
