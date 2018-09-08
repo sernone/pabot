@@ -32,12 +32,19 @@ schedule.scheduleJob("0 5 * * *", () => {
 try {
   client.on("ready", () => {
     console.log(client.user.username + " - (" + client.user.id + ") Connected");
+
     var channel = client.channels.find("name", "role-call");
-    channel.send(
-      "Hello AcePack! I'am ready for you now, use ! to call to me. Right now my available commands are:"
+    var fanRoles = channel.guild.roles.filter(fanRole =>
+      fanRole.name.endsWith(" Fan")
     );
-    botCmds.forEach(cmd => {
-      channel.send("Command: " + cmd[0] + " - " + cmd[1]);
+
+    channel.send(
+      "Hello AcePack! Are you a fan of a game and want to participate in events for the game and upto date with the team?! \
+Say no more use one of the below fan roles with the command !role and the name of the game or fan role you would like!"
+    );
+
+    fanRoles.forEach(rl => {
+      channel.send(rl.name + ' - ' + rl);
     });
 
     setInterval(checkPackRole, 60000);
@@ -95,6 +102,8 @@ client.on("message", message => {
               fanRole.name.endsWith(" Fan")
             );
 
+            message.delete(10000);
+
             var roleToAdd = message.guild.roles.filter(
               fanRole => fanRole.name.toLowerCase() == arg.toLowerCase()
             );
@@ -111,6 +120,9 @@ client.on("message", message => {
                         addingRole +
                         " has been added given to you"
                     )
+                    .then(msg => {
+                      msg.delete(10000)
+                    })
                   )
                   .catch(err => {
                     message.channel.send(
@@ -153,12 +165,12 @@ client.login(auth.token);
 
 function checkPackRole(){
   var polarServer = client.guilds.find(serv => {
-    if(serv.name === 'Polar Ace') return serv
+    if(serv.name === 'SernBot Test' && serv.verified !== true) return serv
   })
   var packRole = polarServer.roles.find('name','The Pack');
   polarServer.members.find(mem => {
     if(!mem.roles.exists('id', packRole.id)) {
-      mem.addRole(packRole, "PolarBot added The Pack Role to this user.");
+      //mem.addRole(packRole, "PolarBot added The Pack Role to this user.");
     }
   })
 }
