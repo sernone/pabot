@@ -44,7 +44,7 @@ Say no more use one of the below fan roles with the command !role and the name o
     );
 
     fanRoles.forEach(rl => {
-      channel.send(rl.name + ' - ' + rl);
+      channel.send(rl.name);
     });
 
     setInterval(checkPackRole, 60000);
