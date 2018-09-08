@@ -43,7 +43,12 @@ try {
 Say no more use one of the below fan roles with the command !role and the name of the game or fan role you would like!"
     );
 
-    channel.send(fanRoles.join());
+    roleOutput = "";
+
+    fanRoles.forEach(r => {
+      roleOutput += r.name + "\n";
+    });
+    channel.send(roleOutput);
 
     setInterval(checkPackRole, 60000);
     setInterval(checkStream, 60000, "polaracetv");
