@@ -7,10 +7,6 @@ var client = new Discord.Client();
 
 var botCmds = [
   [
-    "!role roleName",
-    "Adds a fan role to a user eg: !role pubg. This can only be called from the #role-call channel."
-  ],
-  [
     "!checkin timeToStream",
     "For PATV Members only to checkin to their stream for the day. This can only be called from the #patv-streamer channel."
   ],
@@ -19,8 +15,16 @@ var botCmds = [
     "Outputs who is streaming and what time they are streaming on the PATV Channel"
   ],
   [
-    "?help",
-    "All ? prefix commands control the music bot attached to me, use ?help to get a list of commands for it. Please call this from the #bot-spam Channel."
+    "!streamalert add/remove twitchName",
+    "'add' or 'remove' alerts when a streamer goes live to the media and sharing channel. Owner or Staff Only Command"
+  ],
+  [
+    "!events",
+    "Displays all of the weeks events from our TeamUp Calendar"
+  ],
+  [
+    "!eventtoday",
+    "Displays what event is going on Today from the TeamUp Calendar"
   ]
 ];
 var sentLive = false;
@@ -33,28 +37,10 @@ try {
   client.on("ready", () => {
     console.log(client.user.username + " - (" + client.user.id + ") Connected");
 
-    var channel = client.channels.find("name", "role-call");
-    var fanRoles = channel.guild.roles.filter(fanRole =>
-      fanRole.name.endsWith(" Fan")
-    );
-
-    channel.send(
-      "Hello AcePack! Are you a fan of a game and want to participate in events for the game and upto date with the team?! \
-Say no more use one of the below fan roles with the command !role and the name of the game or fan role you would like!"
-    );
-
-    roleOutput = "";
-
-    fanRoles.forEach(r => {
-      roleOutput += r.name + "\n";
-    });
-    channel.send(roleOutput);
-
     setInterval(checkPackRole, 60000);
-    setInterval(checkStream, 60000, "polaracetv");
+    setInterval(checkStream, 60000);
   });
-}
-catch(err) {
+} catch (err) {
   throw err.message;
 }
 
@@ -69,94 +55,56 @@ client.on("message", message => {
 
     switch (cmd.toLowerCase()) {
       case "checkin":
-        if (message.channel.name == "patv-streamers") {
-          if (arg.substring(1) !== cmd) {
-            var streamer = message.author.username;
-            var sch = JSON.parse(
-              fs.readFileSync("./streamer-schedule.json", "utf8")
-            );
-            sch[streamer] = arg;
-            fs.writeFileSync("./streamer-schedule.json", JSON.stringify(sch));
-            message.reply("You have checked to stream today for " + arg);
-          } else
-            message.channel.send(
-              "Hey streamer!, the !checkin command requires you put when your steaming please!:"
-            );
-        }
+        checkin(message, arg, cmd);
         break;
       case "streamtoday":
-        var sch = "";
-        var data = JSON.parse(
-          fs.readFileSync("./streamer-schedule.json", "utf8")
-        );
-        for (streamer in data) {
-          sch +=
-            streamer + " is set to stream " + data[streamer] + " today. \n";
-        }
-
-        message.channel.send(sch);
+        streamToday(message);
         break;
-      case "role":
-        if (message.channel.name == "role-call") {
-          if (arg.substring(1) !== cmd) {
-            if (!arg.toLowerCase().endsWith(" fan")) arg = arg + " fan";
-            var fanRoles = message.guild.roles.array();
-            fanRoles = fanRoles.filter(fanRole =>
-              fanRole.name.endsWith(" Fan")
-            );
-
-            message.delete(10000);
-
-            var roleToAdd = message.guild.roles.filter(
-              fanRole => fanRole.name.toLowerCase() == arg.toLowerCase()
-            );
-
-            if (roleToAdd.size == 1 && roleToAdd.first() != undefined) {
-              var memeber = message.member;
-              var addingRole = roleToAdd.first();
-              if (!memeber.roles.has(addingRole)) {
-                memeber
-                  .addRole(addingRole)
-                  .then(
-                    message.channel.send(
-                      "Success - Role " +
-                        addingRole +
-                        " has been added given to you"
-                    )
-                    .then(msg => {
-                      msg.delete(10000)
-                    })
-                  )
-                  .catch(err => {
-                    message.channel.send(
-                      "An error occured please contact an admin to have them check the error. Apologies we'll get this fixed soon!"
-                    );
-                    console.error(err);
-                  });
-              }
-            } else {
-              message.channel.send(
-                "Error: Role " +
-                  arg.toLowerCase() +
-                  " not found. Check available roles and try again or contact an admin. Available Roles are: " +
-                  fanRoles.join()
-              );
-            }
-          } else
-            message.channel.send(
-              "The !role command requires a fan role after it. Please include the role you're looking for after the command."
-            );
-        }
+      case "streamalert":
+        streamAlert(message, arg);
         break;
-        case "help":
-          botCmds.forEach(cmd => {
-            message.channel.send("Command: " + cmd[0] + " - " + cmd[1]);
-          });
+      case "help":
+        help(message);
+        break;
+      case "events":
+        var dt = new Date();
+        var weekStart = new Date(dt.setDate(dt.getDate() - dt.getDay() + (dt.getDay === 0 ? -6 : 0)));
+        var weekEnd = new Date(dt.setDate(dt.getDate() - dt.getDay() + (dt.getDay === 6 ? -1 : 6)));
+
+        var start = weekStart.getFullYear() + '-' + (weekStart.getMonth()+1).toString() + '-' + weekStart.getDate();
+        var end = weekEnd.getFullYear() + '-' + (weekEnd.getMonth()+1).toString() + '-' + weekEnd.getDate();
+
+        events(start,end,function(allEvents){
+          message.channel.send("__**Here's a list of Upcoming PolarAce Events This Week!**__\nTo see our entire calendar of upcoming and past events check it out here ! https://teamup.com/kse85f2w1dp59ydxgj\n\n");
+          var weekDays = new Array("Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday");
+          for(var i in allEvents.events) {
+            var eventStart = new Date(allEvents.events[i].start_dt);
+            var eventTitle = allEvents.events[i].title;
+            var notes = (allEvents.events[i].notes !== null ? allEvents.events[i].notes : "No additional info");
+
+            message.channel.send("**Starting:** " + weekDays[eventStart.getDay()] + " " + eventStart.toLocaleString() + "\n**Event:** " + eventTitle + "\n**Info:** " + notes + "\n\n");
+          }
+        });
+        break;
+      case "eventtoday":
+        events(null,null,function(todayEvent){
+          if(todayEvent.events.length > 0) {
+            var event = todayEvent.events[0];
+            var eventStart = new Date(event.start_dt);
+            var eventTitle = event.title;
+            var notes = (event.notes !== null ? event.notes : "No additional info");
+
+            message.channel.send("__**Here's what's going on with PolarAce Today!**__\nTo see our entire calendar of upcoming and past events check it out here ! https://teamup.com/kse85f2w1dp59ydxgj\n\n");
+            message.channel.send("**Starting:** " + eventStart.toLocaleTimeString() + "\n**Event:** " + eventTitle + "\n**Info:** " + notes + "\n\n");
+          }
+        });
         break;
       default:
-        message.channel.send(
-          "Invalid command, available commands are: !role, !checkin, !streamtoday"
-        );
+        if (msgChat.match(/^[!][a-zA-Z]+$/)) {
+          message.channel.send(
+            "Invalid command, available commands are: !role, !checkin, !streamtoday, !streamalert, !events, !eventtoday"
+          );
+        }
         break;
     }
   }
@@ -164,29 +112,73 @@ client.on("message", message => {
 
 client.login(auth.token);
 
-//Other functions
-
-function checkPackRole(){
-  var polarServer = client.guilds.find(serv => {
-    if(serv.name === 'SernBot Test' && serv.verified !== true) return serv
-  })
-  var packRole = polarServer.roles.find('name','The Pack');
-  polarServer.members.find(mem => {
-    if(!mem.roles.exists('id', packRole.id)) {
-      //mem.addRole(packRole, "PolarBot added The Pack Role to this user.");
-    }
-  })
+//Call functions
+function checkin(msg, arg, cmd) {
+  if (msg.channel.name == "patv-streamers") {
+    if (arg.substring(1) !== cmd) {
+      var streamer = msg.author.username;
+      var sch = JSON.parse(fs.readFileSync("./streamer-schedule.json", "utf8"));
+      sch[streamer] = arg;
+      fs.writeFileSync("./streamer-schedule.json", JSON.stringify(sch));
+      msg.reply("You have checked to stream today for " + arg);
+    } else
+      msg.channel.send(
+        "Hey streamer!, the !checkin command requires you put when your steaming please!:"
+      );
+  }
 }
 
-function checkStream(twitchUser) {
+function streamToday(msg) {
+  var sch = "";
+  var data = JSON.parse(fs.readFileSync("./streamer-schedule.json", "utf8"));
+  for (streamer in data) {
+    sch += streamer + " is set to stream " + data[streamer] + " today. \n";
+  }
+
+  msg.channel.send(sch);
+}
+
+function streamAlert(msg, arg) {
+  if (msg.member.roles.find("name", "Org Staff") || msg.member.roles.find("name", "Owner")) {
+    var call = arg.split(" ");
+    switch (call[0]) {
+      case "add":
+        var str = JSON.parse(fs.readFileSync("./streamers.json", "utf8"));
+        str[call[1]] = false;
+        fs.writeFileSync("./streamers.json", JSON.stringify(str));
+        msg.channel.send(call[1] + " has been added to stream live alerts!");
+        break;
+      case "remove":
+        var str = JSON.parse(fs.readFileSync("./streamers.json", "utf8"));
+        delete str[call[1]];
+        fs.writeFileSync("./streamers.json", JSON.stringify(str));
+        msg.channel.send(call[1] + " has been removed to stream live alerts.");
+        break;
+      default:
+        msg.channel.send(
+          "Invalid streamer command, please use add or remove for " + call[1]
+        );
+        break;
+    }
+  }
+}
+
+function events(sd,ed,cb) {
+  if(sd !== null) {
+    var query = "startDate="+sd+"&endDate="+ed+"&format=markdown";
+  } else {
+    var query = "format=markdown";
+  }
+
   var http_options = {
-    host: "api.twitch.tv",
-    path: "/helix/streams?user_login=" + twitchUser,
+    host: "api.teamup.com",
+    path: "/"+auth.calendar+"/events?"+query,
     method: "GET",
     headers: {
-      "Client-ID": "btwox7o0tmnpqupua8xwj8rxrt94x7"
+      "Teamup-Token": auth.teamup
     }
-  };
+  }
+
   https.get(http_options, resp => {
     var data = "";
 
@@ -195,26 +187,74 @@ function checkStream(twitchUser) {
     });
 
     resp.on("end", () => {
-      var chanData = JSON.parse(data);
-      chanData = chanData.data;
+      cb(JSON.parse(data));
+    });
+  });
+}
 
-      if (chanData.length > 0) {
-        if (!sentLive) {
-          var disChan = client.channels.find(
-            "name",
-            "stream-and-media-sharing"
-          );
-          disChan.send(
-            "We are LIVE here https://twitch.tv/" +
-              twitchUser +
-              " , Come by and check us out!"
-          );
-          disChan.send(chanData[0].title);
-          sentLive = true;
-        }
-      } else {
-        sentLive = false;
+function help(msg) {
+  botCmds.forEach(cmd => {
+    msg.channel.send("**Command**: __" + cmd[0] + "__ - " + cmd[1]);
+  });
+}
+
+//Other functions
+
+function checkPackRole() {
+  var polarServer = client.guilds.find(serv => {
+    if (serv.name == "Polar Ace" || serv.name == "SernBot Test") return serv;
+  });
+  var packRole = polarServer.roles.find("name", "The Pack");
+  polarServer.members.find(mem => {
+    if (!mem.roles.exists("id", packRole.id)) {
+      mem.addRole(packRole, "PolarBot added The Pack Role to this user.");
+    }
+  });
+}
+
+async function checkStream() {
+  var str = JSON.parse(fs.readFileSync("./streamers.json", "utf8"));
+  await Object.keys(str).forEach(function(twitchUser) {
+    var http_options = {
+      host: "api.twitch.tv",
+      path: "/helix/streams?user_login=" + twitchUser,
+      method: "GET",
+      headers: {
+        "Client-ID": "btwox7o0tmnpqupua8xwj8rxrt94x7"
       }
+    };
+
+    https.get(http_options, resp => {
+      var data = "";
+
+      resp.on("data", chunk => {
+        data += chunk;
+      });
+
+      resp.on("end", () => {
+        var chanData = JSON.parse(data);
+        chanData = chanData.data;
+
+        if (chanData.length > 0 && chanData !== undefined) {
+          if (!str[twitchUser]) {
+            var disChan = client.channels.find(
+              "name",
+              "stream-and-media-sharing"
+            );
+            disChan.send(
+              "We are LIVE here https://twitch.tv/" +
+                twitchUser +
+                " , Come by and check us out!"
+            );
+            disChan.send(chanData[0].title);
+            str[twitchUser] = true;
+            fs.writeFileSync("./streamers.json", JSON.stringify(str));
+          }
+        } else {
+          str[twitchUser] = false;
+          fs.writeFileSync("./streamers.json", JSON.stringify(str));
+        }
+      });
     });
   });
 }
