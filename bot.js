@@ -25,6 +25,10 @@ var botCmds = [
   [
     "!eventtoday",
     "Displays what event is going on Today from the TeamUp Calendar"
+  ],
+  [
+    "!members",
+    "Gets the current server member count"
   ]
 ];
 var sentLive = false;
@@ -33,12 +37,21 @@ schedule.scheduleJob("0 5 * * *", () => {
   fs.writeFileSync("./streamer-schedule.json", "{}");
 });
 
+if(!fs.existsSync("./hasBrawlerRole.json")) {
+  fs.writeFileSync("./hasBrawlerRole.json", "{}");
+}
+
+if(!fs.existsSync("./streamers.json")) {
+  fs.writeFileSync("./streamers.json", "{}");
+}
+
 try {
   client.on("ready", () => {
     console.log(client.user.username + " - (" + client.user.id + ") Connected");
 
     setInterval(checkPackRole, 60000);
     setInterval(checkStream, 60000);
+    setInterval(checkBrawlerRole, 30000);
   });
 } catch (err) {
   throw err.message;
@@ -56,6 +69,14 @@ client.on("message", message => {
     switch (cmd.toLowerCase()) {
       case "checkin":
         checkin(message, arg, cmd);
+        break;
+      case "members":
+        message.channel.send(
+          "There are currently " + message.guild.memberCount + " that have joined The Ace Pack!"
+        );
+        break;
+      case "ban":
+        banUser(message, arg);
         break;
       case "streamtoday":
         streamToday(message);
@@ -101,18 +122,51 @@ client.on("message", message => {
         break;
       default:
         if (msgChat.match(/^[!][a-zA-Z]+$/)) {
+          var errCmds = "Invalid command, available commands are: "
+          botCmds.forEach(cmd => {
+            errCmds += cmd[0] + ", "
+          });
           message.channel.send(
-            "Invalid command, available commands are: !role, !checkin, !streamtoday, !streamalert, !events, !eventtoday"
+             errCmds
           );
         }
         break;
     }
+  } else {
+    checkForLinks(message,msgChat);
   }
 });
 
 client.login(auth.token);
 
 //Call functions
+
+function checkForLinks(msgObj,msgChat) {
+  var foundLink = /(http:\/\/|https:\/\/|discord.gg|discord.com)/;
+  if(foundLink.test(msgChat) && msgObj.channel.name != "stream-and-media-sharing") {
+    console.log("found test");
+    if(!(msgObj.member.roles.find("name", "Org Staff") || msgObj.member.roles.find("name", "Owner") || msgObj.member.roles.find("name", "PolarBot"))) {
+      console.log("should delete");
+      msgObj.delete();
+      msgObj.author.send("Hey There " + msgObj.author.username + ", Sorry pack member we don't like links in any of our other channels except #stream-and-media-sharing. Please keep in mind repeated offensives might lead to a kick or worse. We love you being part of the pack but please respect our rules. Thanks Friend!! #AcePack");
+    }
+  }
+}
+
+function banUser(msg, arg) {
+  if(msg.member.roles.find("name", "Owner")) {
+    var call = arg.split(" ");
+    var reason = arg.substring(arg.indexOf(call[1]),arg.length);
+    if(reason !== arg) {
+      var findUser = msg.mentions.members.first()
+      findUser.ban(reason)
+      msg.channel.send("User " + findUser.user + " has been banned. Reason: " + reason);
+    } else {
+      msg.channel.send("You need to put a reason after the user you are banning!");
+    }
+  }
+}
+
 function checkin(msg, arg, cmd) {
   if (msg.channel.name == "patv-streamers") {
     if (arg.substring(1) !== cmd) {
@@ -202,12 +256,28 @@ function help(msg) {
 
 function checkPackRole() {
   var polarServer = client.guilds.find(serv => {
-    if (serv.name == "Polar Ace" || serv.name == "SernBot Test") return serv;
+    if (serv.name == "Polar Ace") return serv;
   });
   var packRole = polarServer.roles.find("name", "The Pack");
   polarServer.members.find(mem => {
     if (!mem.roles.exists("id", packRole.id)) {
       mem.addRole(packRole, "PolarBot added The Pack Role to this user.");
+    }
+  });
+}
+
+function checkBrawlerRole() {
+  var polarServer = client.guilds.find(serv => {
+    if (serv.name == "Polar Ace") return serv;
+  });
+
+  var brawlerRole = polarServer.roles.find("name", "PABrawl Team");
+  brawlerRole.members.forEach(bra => {
+    var gotMesssage = JSON.parse(fs.readFileSync("./hasBrawlerRole.json", "utf8"));
+    if(!gotMesssage.hasOwnProperty(bra.id)) {
+      gotMesssage[bra.id] = true;
+      fs.writeFileSync("./hasBrawlerRole.json", JSON.stringify(gotMesssage));
+      bra.send("Congratulations, you have officially been registered for the #PABrawl tournament! Head over to the PABrawl section for tournament news, to set up matches, and to ask for help. Please make sure your team captain changes their nickname or reaches out to a @BrawlMod so we can give them the appropriate permissions.");
     }
   });
 }
